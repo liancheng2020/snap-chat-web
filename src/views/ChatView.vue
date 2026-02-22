@@ -208,18 +208,18 @@ function toggleTheme() {
                   </feMerge>
                 </filter>
               </defs>
-              <!-- 外层光晕圆 -->
+              <!-- 外层光晕圆（中心 cx=44, cy=44） -->
               <circle cx="44" cy="44" r="40" fill="url(#glowGrad)" />
-              <!-- 气泡主体 -->
-              <rect x="10" y="18" width="58" height="40" rx="16" fill="url(#bubbleGrad)" filter="url(#glow)" />
+              <!-- 气泡主体（x=15, y=24, width=58, height=40 → 中心 x=44, y=44，与光晕圆心完全对齐） -->
+              <rect x="15" y="24" width="58" height="40" rx="16" fill="url(#bubbleGrad)" filter="url(#glow)" />
               <!-- 高光层 -->
-              <rect x="10" y="18" width="58" height="18" rx="16" fill="white" opacity="0.12" />
+              <rect x="15" y="24" width="58" height="18" rx="16" fill="white" opacity="0.12" />
               <!-- 气泡尾（圆润三角） -->
-              <path d="M22 57 C20 64 16 70 28 66 L26 57Z" fill="url(#bubbleGrad)" />
-              <!-- 三个点（带弹跳动画占位） -->
-              <circle cx="30" cy="38" r="4.5" fill="white" opacity="0.92" />
-              <circle cx="44" cy="38" r="4.5" fill="white" opacity="0.92" />
-              <circle cx="58" cy="38" r="4.5" fill="white" opacity="0.92" />
+              <path d="M27 63 C25 70 21 76 33 72 L31 63Z" fill="url(#bubbleGrad)" />
+              <!-- 三个点（气泡中心 x=44, y=44，间距14px） -->
+              <circle cx="30" cy="44" r="4.5" fill="white" opacity="0.92" />
+              <circle cx="44" cy="44" r="4.5" fill="white" opacity="0.92" />
+              <circle cx="58" cy="44" r="4.5" fill="white" opacity="0.92" />
             </svg>
           </div>
           <h2>开始一段新对话</h2>
@@ -307,16 +307,19 @@ function toggleTheme() {
   overflow-y: auto;
   padding: 16px 20px;
   scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   gap: 8px;
   color: var(--color-text-muted);
+  text-align: center;
 }
 
 .chat-empty__icon {
