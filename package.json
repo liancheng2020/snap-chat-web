@@ -4,22 +4,30 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n \"API,Vite\" -c \"bgBlue.bold,bgGreen.bold\" \"tsx server/index.ts\" \"vite\"",
+    "dev:vite": "vite",
+    "dev:server": "tsx server/index.ts",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "pinia": "^2.3.1",
-    "ai": "^4.3.15",
     "@ai-sdk/openai-compatible": "^0.2.14",
-    "marked": "^15.0.7",
+    "ai": "^4.3.15",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "highlight.js": "^11.11.1",
-    "marked-highlight": "^2.2.1"
+    "marked": "^15.0.7",
+    "marked-highlight": "^2.2.1",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.0",
     "@vitejs/plugin-vue": "^5.2.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
     "typescript": "~5.7.2",
     "vite": "^6.3.5",
     "vue-tsc": "^2.2.8"

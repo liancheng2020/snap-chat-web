@@ -51,23 +51,27 @@
 
 ```text
 snap-chat-web/
+├── api/
+│   └── chat.ts            # Vercel Edge Function（生产环境 API 路由）
+├── server/
+│   └── index.ts           # 本地开发用 Express API 服务（端口 3000）
 ├── public/                # 静态资源
 ├── src/
-│   ├── api/               # API 请求封装（DeepSeek / Vercel AI SDK）
 │   ├── assets/            # 图片、样式等资源
 │   ├── components/        # 公共组件
 │   │   ├── ChatInput.vue      # 消息输入框
 │   │   ├── ChatMessage.vue    # 消息气泡
-│   │   ├── ChatSidebar.vue    # 历史对话侧边栏
-│   │   └── MarkdownRenderer.vue # Markdown 渲染组件
-│   ├── composables/       # Vue 组合式函数（useChat 等）
+│   │   └── ChatSidebar.vue    # 历史对话侧边栏
+│   ├── composables/       # Vue 组合式函数
+│   │   └── useChat.ts         # 调用 /api/chat 的流式请求封装
 │   ├── stores/            # Pinia 状态管理
 │   ├── types/             # TypeScript 类型定义
-│   ├── views/             # 页面视图
+│   ├── views/
 │   │   └── ChatView.vue       # 主对话页面
 │   ├── App.vue
 │   └── main.ts
 ├── .env.example           # 环境变量示例
+├── vercel.json            # Vercel 部署配置
 ├── vite.config.ts
 └── package.json
 ```
@@ -92,22 +96,40 @@ pnpm install
 复制 `.env.example` 为 `.env.local`，并填入对应参数：
 
 ```env
-VITE_DEEPSEEK_API_KEY=your_deepseek_api_key
-VITE_DEEPSEEK_BASE_URL=https://api.deepseek.com
-VITE_DEEPSEEK_MODEL=deepseek-chat
+# DeepSeek API 配置（仅服务端使用，不会暴露给前端）
+DEEPSEEK_API_KEY=your_deepseek_api_key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
 ### 启动开发服务器
 
 ```bash
-pnpm dev
+npm run dev
 ```
+
+> 会同时启动：
+>
+> - **Express API 服务**（`http://localhost:3000`）— 负责中转 DeepSeek 调用，保护 API Key
+> - **Vite 前端**（`http://localhost:5173`）— 前端页面，`/api` 请求自动代理到 3000 端口
 
 ### 构建生产版本
 
 ```bash
-pnpm build
+npm run build
 ```
+
+---
+
+## ☁️ 部署到 Vercel
+
+1. 将项目推送到 GitHub
+2. 在 [Vercel](https://vercel.com) 导入该仓库
+3. 在项目的 **Environment Variables** 中添加：
+   - `DEEPSEEK_API_KEY` — 你的 DeepSeek API Key
+   - `DEEPSEEK_BASE_URL` — `https://api.deepseek.com/v1`（可选）
+   - `DEEPSEEK_MODEL` — `deepseek-chat`（可选）
+4. 点击 Deploy，完成！
 
 ---
 
