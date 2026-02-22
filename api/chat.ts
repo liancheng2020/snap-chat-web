@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import { streamText } from 'ai'
+import { streamText, type CoreMessage } from 'ai'
 
 export const config = {
   runtime: 'edge' // 使用 Edge Runtime，支持流式响应
@@ -25,9 +25,9 @@ export default async function handler(req: Request): Promise<Response> {
     })
   }
 
-  let messages: { role: 'user' | 'assistant'; content: string }[]
+  let messages: CoreMessage[]
   try {
-    const body = await req.json()
+    const body = (await req.json()) as { messages: CoreMessage[] }
     messages = body.messages
     if (!Array.isArray(messages) || messages.length === 0) {
       throw new Error('messages 格式错误')

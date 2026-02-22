@@ -6,7 +6,7 @@ import { useChat } from '@/composables/useChat'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import ChatSidebar from '@/components/ChatSidebar.vue'
-import type { Message } from '@/types'
+import type { Message, AttachedFile } from '@/types'
 
 const store = useChatStore()
 const { conversations, activeId, activeConversation } = storeToRefs(store)
@@ -15,7 +15,7 @@ const { conversations, activeId, activeConversation } = storeToRefs(store)
 const isMobile = () => window.innerWidth <= 640
 const sidebarCollapsed = ref(isMobile())
 const messagesRef = ref<HTMLElement | null>(null)
-const toast = ref<string | null>(null)
+const toast = ref<{ msg: string; type: 'success' | 'error' } | null>(null)
 const streamingContent = ref('')
 const streamingMsgId = ref<string | null>(null)
 
@@ -38,41 +38,61 @@ async function scrollToBottom() {
 watch(() => displayMessages.value.length, scrollToBottom)
 watch(streamingContent, scrollToBottom)
 
-async function handleSend(content: string) {
+// 页面加载 / 切换对话时，滚动到底部
+watch(activeId, () => nextTick(scrollToBottom), { immediate: true })
+
+async function handleSend(content: string, files: AttachedFile[] = []) {
   if (!activeId.value) return
 
-  const userMsg: Message = {
-    id: crypto.randomUUID(),
-    role: 'user',
-    content,
-    createdAt: new Date()
-  }
-  store.addMessage(activeId.value, userMsg)
+  try {
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      files: files.length > 0 ? files : undefined,
+      createdAt: new Date()
+    }
+    store.addMessage(activeId.value, userMsg)
 
-  const assistantMsgId = crypto.randomUUID()
-  const assistantMsg: Message = {
-    id: assistantMsgId,
-    role: 'assistant',
-    content: '',
-    createdAt: new Date()
-  }
-  store.addMessage(activeId.value, assistantMsg)
-  streamingMsgId.value = assistantMsgId
-  streamingContent.value = ''
+    const assistantMsgId = crypto.randomUUID()
+    const assistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date()
+    }
+    store.addMessage(activeId.value, assistantMsg)
+    streamingMsgId.value = assistantMsgId
+    streamingContent.value = ''
 
-  const historyMessages = activeConversation.value!.messages.slice(0, -1) // 不含空白 assistant
+    const historyMessages = activeConversation.value!.messages.slice(0, -1) // 不含空白 assistant
 
-  await sendMessage(
-    historyMessages,
-    (text) => {
-      streamingContent.value = text
-    },
-    (fullText) => {
-      store.updateLastAssistantMessage(activeId.value!, fullText)
+    await sendMessage(
+      historyMessages,
+      (text) => {
+        streamingContent.value = text
+      },
+      (fullText) => {
+        store.updateLastAssistantMessage(activeId.value!, fullText)
+        streamingMsgId.value = null
+        streamingContent.value = ''
+      }
+    )
+
+    // 请求失败时，把错误写入 assistant 消息气泡
+    if (error.value) {
+      store.updateLastAssistantMessage(activeId.value!, `__ERROR__:${error.value}`)
       streamingMsgId.value = null
       streamingContent.value = ''
     }
-  )
+  } catch (e) {
+    console.error('handleSend 异常:', e)
+    if (streamingMsgId.value) {
+      store.updateLastAssistantMessage(activeId.value!, `__ERROR__:发送失败，请重试`)
+      streamingMsgId.value = null
+      streamingContent.value = ''
+    }
+  }
 }
 
 async function handleRegenerate() {
@@ -103,19 +123,25 @@ async function handleRegenerate() {
       streamingMsgId.value = null
     }
   )
+
+  if (error.value) {
+    store.updateLastAssistantMessage(activeId.value!, `__ERROR__:${error.value}`)
+    streamingMsgId.value = null
+    streamingContent.value = ''
+  }
 }
 
 function handleCopy(content: string) {
   navigator.clipboard.writeText(content).then(() => {
-    showToast('已复制到剪贴板')
+    showToast('已复制到剪贴板', 'success')
   })
 }
 
-function showToast(msg: string) {
-  toast.value = msg
+function showToast(msg: string, type: 'success' | 'error' = 'success') {
+  toast.value = { msg, type }
   setTimeout(() => {
     toast.value = null
-  }, 2000)
+  }, 3000)
 }
 
 // 主题切换
@@ -259,24 +285,13 @@ function toggleTheme() {
         <div v-if="isLoading && !streamingMsgId" class="loading-dots"><span /><span /><span /></div>
       </div>
 
-      <!-- 错误提示 -->
-      <div v-if="error" class="error-bar">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        {{ error }}
-        <button @click="error = null">✕</button>
-      </div>
-
       <!-- 输入框 -->
       <ChatInput :loading="isLoading" @send="handleSend" @stop="stop" />
     </div>
 
     <!-- Toast 提示 -->
     <transition name="toast">
-      <div v-if="toast" class="toast">{{ toast }}</div>
+      <div v-if="toast" class="toast" :class="`toast--${toast.type}`">{{ toast.msg }}</div>
     </transition>
   </div>
 </template>
@@ -400,27 +415,6 @@ function toggleTheme() {
   }
 }
 
-.error-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 16px 8px;
-  padding: 10px 14px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #dc2626;
-}
-
-.error-bar button {
-  margin-left: auto;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #dc2626;
-}
-
 .icon-btn {
   display: flex;
   align-items: center;
@@ -445,13 +439,20 @@ function toggleTheme() {
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px 18px;
-  background: rgba(0, 0, 0, 0.75);
+  padding: 9px 20px;
+  background: rgba(0, 0, 0, 0.78);
   color: #fff;
   border-radius: 20px;
   font-size: 13px;
   pointer-events: none;
   z-index: 999;
+  max-width: 80vw;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.toast--error {
+  background: #dc2626;
 }
 
 .toast-enter-active,

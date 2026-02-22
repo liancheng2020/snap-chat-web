@@ -21,7 +21,37 @@ function loadFromStorage(): Conversation[] {
 }
 
 function saveToStorage(conversations: Conversation[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
+  // 存储时剥离文件的 data/previewUrl（base64/文本内容），避免超出 localStorage 配额
+  // 历史记录只需保留文件名、大小等元信息用于展示
+  const stripped = conversations.map((c) => ({
+    ...c,
+    messages: c.messages.map((m) => ({
+      ...m,
+      files: m.files?.map(({ data: _data, previewUrl: _previewUrl, ...meta }) => ({
+        ...meta,
+        data: '',
+        previewUrl: undefined
+      }))
+    }))
+  }))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+  } catch (e) {
+    // 仍然超限时（极端情况），裁剪旧对话消息后重试
+    console.warn('localStorage 存储超限，尝试裁剪历史记录', e)
+    const trimmed = stripped.map((c, i) => ({
+      ...c,
+      // 只保留最新的对话完整，其余对话只保留最近 10 条消息
+      messages: i === 0 ? c.messages : c.messages.slice(-10)
+    }))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
+    } catch {
+      // 最后兜底：只保存对话列表元信息，不保存消息
+      const minimal = stripped.map((c) => ({ ...c, messages: [] }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(minimal))
+    }
+  }
 }
 
 export const useChatStore = defineStore('chat', () => {
