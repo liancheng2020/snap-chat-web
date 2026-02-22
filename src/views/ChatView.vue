@@ -11,7 +11,9 @@ import type { Message } from '@/types'
 const store = useChatStore()
 const { conversations, activeId, activeConversation } = storeToRefs(store)
 
-const sidebarCollapsed = ref(false)
+// 移动端默认收起侧边栏
+const isMobile = () => window.innerWidth <= 640
+const sidebarCollapsed = ref(isMobile())
 const messagesRef = ref<HTMLElement | null>(null)
 const toast = ref<string | null>(null)
 const streamingContent = ref('')
@@ -132,8 +134,18 @@ function toggleTheme() {
       :conversations="conversations"
       :active-id="activeId"
       :collapsed="sidebarCollapsed"
-      @select="store.setActive"
-      @create="store.createConversation"
+      @select="
+        (id) => {
+          store.setActive(id)
+          if (isMobile()) sidebarCollapsed = true
+        }
+      "
+      @create="
+        () => {
+          store.createConversation()
+          if (isMobile()) sidebarCollapsed = true
+        }
+      "
       @rename="store.renameConversation"
       @delete="store.deleteConversation"
       @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
@@ -143,6 +155,14 @@ function toggleTheme() {
     <div class="chat-main">
       <!-- 顶栏 -->
       <header class="chat-header">
+        <!-- 移动端菜单按钮（侧边栏收起时显示） -->
+        <button v-if="sidebarCollapsed" class="icon-btn mobile-menu-btn" title="打开菜单" @click="sidebarCollapsed = false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
         <h1 class="chat-header__title">
           {{ activeConversation?.title || '新对话' }}
         </h1>
@@ -444,5 +464,27 @@ function toggleTheme() {
 .toast-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(10px);
+}
+
+/* ===== 移动端 ===== */
+.mobile-menu-btn {
+  display: none;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+@media (max-width: 640px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .chat-header {
+    padding: 0 12px;
+    gap: 4px;
+  }
+
+  .chat-header__title {
+    flex: 1;
+  }
 }
 </style>

@@ -42,6 +42,9 @@ function formatDate(date: Date): string {
 </script>
 
 <template>
+  <!-- 移动端遮罩层：侧边栏展开时显示，点击关闭 -->
+  <div v-if="!collapsed" class="sidebar-overlay" @click="emit('toggleCollapse')" />
+
   <aside class="sidebar" :class="{ 'sidebar--collapsed': collapsed }">
     <!-- 顶部 -->
     <div class="sidebar__header">
@@ -273,5 +276,40 @@ function formatDate(date: Date): string {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ===== 移动端遮罩 ===== */
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* 遮罩层：覆盖整个屏幕 */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+  }
+
+  /* 侧边栏：浮动在内容上方 */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 100;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    transition:
+      transform 0.25s ease,
+      width 0.25s ease;
+  }
+
+  /* 收起时：完全滑出屏幕左侧，宽度归零 */
+  .sidebar--collapsed {
+    width: 260px;
+    transform: translateX(-100%);
+  }
 }
 </style>
