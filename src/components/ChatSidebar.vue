@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import type { Conversation } from '@/types'
 
-const props = defineProps<{
+const { conversations, activeId, collapsed } = defineProps<{
   conversations: Conversation[]
   activeId: string | null
   collapsed: boolean
