@@ -1,7 +1,7 @@
 import { ref } from 'vue'
-import type { Message } from '@/types'
+import type { AIProviderId, Message } from '@/types'
 
-export function useChat(convId: () => string | null) {
+export function useChat(convId: () => string | null, providerId: () => AIProviderId) {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   let abortController: AbortController | null = null
@@ -46,7 +46,7 @@ export function useChat(convId: () => string | null) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, provider: providerId() }),
         signal: abortController.signal
       })
 

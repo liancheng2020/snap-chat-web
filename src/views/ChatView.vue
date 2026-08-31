@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChatStore } from '@/stores/chat'
 import { useChat } from '@/composables/useChat'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import ChatSidebar from '@/components/ChatSidebar.vue'
-import type { Message, AttachedFile } from '@/types'
+import type { AIProviderId, AIProviderInfo, Message, AttachedFile } from '@/types'
 
 const store = useChatStore()
 const { conversations, activeId, activeConversation } = storeToRefs(store)
@@ -18,8 +18,40 @@ const messagesRef = ref<HTMLElement | null>(null)
 const toast = ref<{ msg: string; type: 'success' | 'error' } | null>(null)
 const streamingContent = ref('')
 const streamingMsgId = ref<string | null>(null)
+const PROVIDER_STORAGE_KEY = 'snap-chat-provider'
+const storedProvider = localStorage.getItem(PROVIDER_STORAGE_KEY)
+const selectedProvider = ref<AIProviderId>(storedProvider === 'orcarouter' ? 'orcarouter' : 'deepseek')
+const providers = ref<AIProviderInfo[]>([
+  { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', configured: true },
+  { id: 'orcarouter', name: 'OrcaRouter', model: 'orcarouter/auto', configured: true }
+])
 
-const { isLoading, error, sendMessage, stop } = useChat(() => activeId.value)
+const { isLoading, error, sendMessage, stop } = useChat(
+  () => activeId.value,
+  () => selectedProvider.value
+)
+
+watch(selectedProvider, (provider) => localStorage.setItem(PROVIDER_STORAGE_KEY, provider))
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/chat')
+    if (!response.ok) return
+    const data = (await response.json()) as { providers?: AIProviderInfo[]; defaultProvider?: AIProviderId }
+    if (!Array.isArray(data.providers) || data.providers.length === 0) return
+
+    providers.value = data.providers
+    const selectedIsConfigured = data.providers.some((provider) => provider.id === selectedProvider.value && provider.configured)
+    if (!selectedIsConfigured) {
+      const fallback =
+        data.providers.find((provider) => provider.id === data.defaultProvider && provider.configured) ??
+        data.providers.find((provider) => provider.configured)
+      if (fallback) selectedProvider.value = fallback.id
+    }
+  } catch {
+    // 元数据读取失败不影响聊天请求，服务端仍会校验 Provider 配置
+  }
+})
 
 // 当前展示的消息（含正在流式输出的内容）
 const displayMessages = computed<Message[]>(() => {
@@ -193,6 +225,14 @@ function toggleTheme() {
           {{ activeConversation?.title || '新对话' }}
         </h1>
         <div class="chat-header__actions">
+          <label class="provider-picker" title="选择 AI Provider">
+            <span class="provider-picker__dot" :class="`provider-picker__dot--${selectedProvider}`" />
+            <select v-model="selectedProvider" :disabled="isLoading" aria-label="选择 AI Provider">
+              <option v-for="provider in providers" :key="provider.id" :value="provider.id" :disabled="!provider.configured">
+                {{ provider.name }} · {{ provider.model }}{{ provider.configured ? '' : '（未配置）' }}
+              </option>
+            </select>
+          </label>
           <!-- 主题切换 -->
           <button class="icon-btn" :title="isDark ? '切换浅色模式' : '切换深色模式'" @click="toggleTheme">
             <svg
@@ -334,7 +374,48 @@ function toggleTheme() {
 
 .chat-header__actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.provider-picker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-2);
+}
+
+.provider-picker__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5b7cff;
+  box-shadow: 0 0 0 3px rgba(91, 124, 255, 0.12);
+}
+
+.provider-picker__dot--orcarouter {
+  background: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
+}
+
+.provider-picker select {
+  max-width: 230px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.provider-picker select:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .chat-messages {
@@ -486,6 +567,16 @@ function toggleTheme() {
 
   .chat-header__title {
     flex: 1;
+  }
+
+  .provider-picker {
+    max-width: 148px;
+    padding: 0 7px;
+  }
+
+  .provider-picker select {
+    min-width: 0;
+    max-width: 116px;
   }
 }
 </style>

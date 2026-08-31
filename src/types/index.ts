@@ -1,5 +1,14 @@
 // 类型定义
 
+export type AIProviderId = 'deepseek' | 'orcarouter'
+
+export interface AIProviderInfo {
+  id: AIProviderId
+  name: string
+  model: string
+  configured: boolean
+}
+
 export interface AttachedFile {
   id: string
   name: string

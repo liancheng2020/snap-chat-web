@@ -3,35 +3,57 @@ config({ path: '.env.local' })
 import express from 'express'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { streamText, type CoreMessage } from 'ai'
+import {
+  getAIProviderConfig,
+  getAIProviderSummaries,
+  getDefaultProviderId,
+  isAIProviderId
+} from '../shared/aiProviders.ts'
 
 const app = express()
 app.use(express.json({ limit: '20mb' }))
 
 const PORT = 3000
 
-app.post('/api/chat', async (req, res) => {
-  const apiKey = process.env.DEEPSEEK_API_KEY
-  const baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'
-  const modelId = process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+app.get('/api/chat', (_req, res) => {
+  res.json({
+    providers: getAIProviderSummaries(),
+    defaultProvider: getDefaultProviderId()
+  })
+})
 
-  if (!apiKey) {
-    res.status(500).json({ error: 'API Key 未配置' })
+app.post('/api/chat', async (req, res) => {
+  const body = req.body as { provider?: unknown; messages?: unknown } | undefined
+  const requestedProvider = body?.provider
+  if (requestedProvider !== undefined && !isAIProviderId(requestedProvider)) {
+    res.status(400).json({ error: '不支持的 AI Provider' })
     return
   }
 
-  const messages = req.body.messages as CoreMessage[]
+  const providerConfig = getAIProviderConfig(requestedProvider ?? getDefaultProviderId())
+  if (!providerConfig.apiKey) {
+    res.status(503).json({ error: `${providerConfig.name} API Key 未配置` })
+    return
+  }
+
+  const messages = body?.messages as CoreMessage[] | undefined
   if (!Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: 'messages 格式错误' })
     return
   }
 
-  const deepseek = createOpenAICompatible({ name: 'deepseek', baseURL, apiKey })
+  const provider = createOpenAICompatible({
+    name: providerConfig.id,
+    baseURL: providerConfig.baseURL,
+    apiKey: providerConfig.apiKey,
+    headers: providerConfig.headers
+  })
 
   try {
     let apiError: string | null = null
 
     const result = streamText({
-      model: deepseek(modelId),
+      model: provider(providerConfig.modelId),
       messages,
       onError: ({ error }) => {
         apiError = error instanceof Error ? error.message : String(error)

@@ -3,15 +3,16 @@
 ![Vue](https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js)
 ![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-latest-black?logo=vercel)
 ![DeepSeek](https://img.shields.io/badge/DeepSeek-API-blue)
+![OrcaRouter](https://img.shields.io/badge/OrcaRouter-Provider-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
 ## 📖 项目介绍
 
-**SnapChat Web** 是一款基于 **Vue 3** 构建的 AI 对话网页应用，类似 ChatGPT 交互界面。项目集成 **Vercel AI SDK** 与 **DeepSeek API**，实现流式对话响应，带来流畅、实时的 AI 聊天体验。
+**SnapChat Web** 是一款基于 **Vue 3** 构建的 AI 对话网页应用，类似 ChatGPT 交互界面。项目集成 **Vercel AI SDK**，支持在 **DeepSeek** 与 **OrcaRouter** Provider 之间切换，实现流式对话响应。
 
-> 技术栈：Vue 3 · Vite · Vercel AI SDK · DeepSeek API · TypeScript
+> 技术栈：Vue 3 · Vite · Vercel AI SDK · DeepSeek API · OrcaRouter · TypeScript
 
 ---
 
@@ -19,7 +20,8 @@
 
 ### 核心功能
 
-- **AI 对话**：基于 DeepSeek API 实现智能多轮对话，支持上下文记忆
+- **AI 对话**：支持 DeepSeek 与 OrcaRouter，实现智能多轮对话与上下文记忆
+- **Provider 切换**：在页面顶栏选择 Provider，选择结果保存在当前浏览器
 - **流式输出**：借助 Vercel AI SDK 实现 Streaming 流式响应，逐字输出效果
 - **Markdown 渲染**：支持对话内容中的 Markdown 格式化（代码高亮、表格、列表等）
 - **代码块高亮**：AI 返回的代码片段支持语法高亮与一键复制
@@ -105,7 +107,19 @@ pnpm install
 DEEPSEEK_API_KEY=your_deepseek_api_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 DEEPSEEK_MODEL=deepseek-chat
+
+# OrcaRouter API 配置（可选）
+ORCAROUTER_API_KEY=your_orcarouter_api_key
+ORCAROUTER_BASE_URL=https://api.orcarouter.ai/v1
+ORCAROUTER_MODEL=orcarouter/auto
+ORCAROUTER_APP_URL=https://github.com/liancheng2020/snap-chat-web
+ORCAROUTER_APP_NAME=SnapChat Web
+
+# 可选：服务端默认 Provider（deepseek 或 orcarouter）
+DEFAULT_AI_PROVIDER=deepseek
 ```
+
+OrcaRouter 使用 OpenAI-compatible 接口。`HTTP-Referer` 与 `X-Title` 归因头由服务端自动发送，API Key 不会下发到浏览器。API Key 可在 [OrcaRouter 控制台](https://www.orcarouter.ai/console/keys)创建。
 
 ### 启动开发服务器
 
@@ -115,7 +129,7 @@ npm run dev
 
 > 会同时启动：
 >
-> - **Express API 服务**（`http://localhost:3000`）— 负责中转 DeepSeek 调用，保护 API Key
+> - **Express API 服务**（`http://localhost:3000`）— 负责中转 Provider 调用，保护 API Key
 > - **Vite 前端**（`http://localhost:5173`）— 前端页面，`/api` 请求自动代理到 3000 端口
 
 ### 构建生产版本
@@ -134,6 +148,11 @@ npm run build
    - `DEEPSEEK_API_KEY` — 你的 DeepSeek API Key
    - `DEEPSEEK_BASE_URL` — `https://api.deepseek.com/v1`（可选）
    - `DEEPSEEK_MODEL` — `deepseek-chat`（可选）
+   - `ORCAROUTER_API_KEY` — 你的 OrcaRouter API Key（启用 OrcaRouter 时必填）
+   - `ORCAROUTER_BASE_URL` — `https://api.orcarouter.ai/v1`（可选）
+   - `ORCAROUTER_MODEL` — `orcarouter/auto`（可选）
+   - `ORCAROUTER_APP_URL` / `ORCAROUTER_APP_NAME` — 项目归因信息（可选，已有默认值）
+   - `DEFAULT_AI_PROVIDER` — `deepseek` 或 `orcarouter`（可选）
 4. 点击 Deploy，完成！
 
 ---
@@ -146,6 +165,7 @@ npm run build
 | [Vite](https://vitejs.dev/)                    | 极速前端构建工具                                 |
 | [Vercel AI SDK](https://sdk.vercel.ai/)        | 提供流式 AI 响应能力的 SDK                       |
 | [DeepSeek API](https://platform.deepseek.com/) | 高性能大语言模型 API                             |
+| [OrcaRouter](https://www.orcarouter.ai/)       | OpenAI-compatible 多模型路由 Provider           |
 | [Pinia](https://pinia.vuejs.org/)              | Vue 3 官方推荐状态管理库                         |
 | [TypeScript](https://www.typescriptlang.org/)  | 类型安全的 JavaScript 超集                       |
 
