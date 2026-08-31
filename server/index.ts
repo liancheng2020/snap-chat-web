@@ -8,7 +8,7 @@ import {
   getAIProviderSummaries,
   getDefaultProviderId,
   isAIProviderId
-} from '../shared/aiProviders.ts'
+} from '../api/_aiProviders'
 
 const app = express()
 app.use(express.json({ limit: '20mb' }))

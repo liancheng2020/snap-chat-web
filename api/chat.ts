@@ -5,7 +5,7 @@ import {
   getAIProviderSummaries,
   getDefaultProviderId,
   isAIProviderId
-} from '../shared/aiProviders.ts'
+} from './_aiProviders'
 
 export const config = {
   runtime: 'edge' // 使用 Edge Runtime，支持流式响应
